@@ -7,8 +7,18 @@
 \usepackage{graphicx}
 \usepackage{lmodern}
 \usepackage{microtype}
+\usepackage{newunicodechar}
+
+% Map Unicode typography to LaTeX-safe ASCII equivalents for stable PDF builds
+\newunicodechar{’}{'}
+\newunicodechar{“}{``}
+\newunicodechar{”}{''}
+\newunicodechar{–}{--}
+\newunicodechar{—}{---}
 
 \geometry{margin=1in}
+\emergencystretch=2em
+\hbadness=10000
 \hypersetup{
   colorlinks = true,
   linkcolor = blue,
@@ -18,10 +28,10 @@
 
 \begin{document}
 
-\title{Rank from References : \\Operational Evaluation for Text AI Classification\\\large Research Report}
+\title{Rank from References: \\Operational Evaluation for Text AI Classification\\\large Research Report}
 \author{Zeno Loi, Mircea Sofonea, Grégoire Mercier, Kévin Yauy, David Morquin\\
 CHU Montpellier, Univ. Montpellier}
-\date{2025-09-23}
+\date{2026-04-21}
 
 \maketitle
 
@@ -29,16 +39,16 @@ CHU Montpellier, Univ. Montpellier}
 
 \begin{abstract}
 \textbf{Background:}\\
-In clinical text classification, competent experts often disagree for legitimate reasons, yet prevailing evaluations collapse plurality into a single “gold” label. With large language models (LLMs) making operational text structuration plausible, there is a need for \emph{variability-aware} acceptance tests that answer: \emph{Is the AI’s behavior within the envelope of human–human variability?}
+Text-classification evaluations often rely on a single reference label, yet in clinical text annotation, competent experts frequently disagree for legitimate reasons. With large language models (LLMs) making operational text structuring plausible, there is a need for \emph{variability-aware} acceptance tests that answer: \emph{Is the AI comparable to its human expert peers?}
 
 \textbf{Methods:}\\
-We introduce \textit{Rank from References} (RFR), a parameter-light, auditable go/no-go rule. RFR compares an automated classifier to each expert via distances over binary multi-label outputs (Hamming geometry) and aggregates these comparisons with a rank statistic and document-level confidence intervals to implement a two–CI non-inferiority/superiority ladder. We pair RFR with a clinician-grounded simulator that models base prevalence, text-driven co-activation, institutional (``school'') calibration, annotator-specific thresholds, and within-shift drifts (linear trends and session-reset random walks).
+We introduce \textit{Rank from References} (RFR), a parameter-light, auditable acceptance rule. RFR compares an automated classifier to each expert via Hamming distances over binary multi-label outputs and aggregates these comparisons with a rank statistic and document-level bootstrap confidence intervals to implement a quantile-based two-CI non-inferiority/superiority ladder. We additionally report normalized micro-RFR as a consensus percentile for continuous interpretation. We pair RFR with a clinician-grounded simulator that models base prevalence, text-driven co-activation, institutional calibration, annotator-specific thresholds, and within-shift drifts (linear trends and session-reset random walks).
 
 \textbf{Results:}\\
-Across \(>2.1\)M corpora classifications, RFR and F1-methods tried to select human-like automated classifiers among biased AIs. RFR prioritized safety (higher specificity/precision) over exhaustivity (recall) compared with F1-based rules, with comparable accuracy and modest MCC, reflecting task difficulty. Concretely, RFR reached specificity \(45.9\%\), precision \(58.2\%\), recall \(60.7\%\), and F1 \(54.9\%\) (vs.\ Iterative/Global F1 specificity \(21.9\%/20.5\%\), precision \(55.3\%/53.7\%\), recall \(85.0\%/81.8\%\), F1 \(63.4\%/61.3\%\)). Error-profile analysis showed substantially fewer false acceptances of biased systems under RFR. Sensitivity analyses indicated no clinically relevant degradation across hyperparameter shifts (e.g., maximum F1 change \(-0.05\) for RFR when increasing \texttt{school\_contrast} from \(0.860\) to \(1.300\)).
+Across \(>2.1\)M simulated classifications, RFR and F1-based methods were used to distinguish unbiased from biased automated classifiers. RFR prioritized safety (higher specificity/precision) over exhaustivity (recall) compared with F1-based rules, with comparable accuracy and modest Matthews correlation coefficient (MCC), reflecting task difficulty. RFR reached specificity \(45.9\%\), precision \(58.2\%\), recall \(60.7\%\), and F1 \(54.9\%\) (vs.\ Average pairwise/Majority F1 specificity \(21.9\%/20.5\%\), precision \(55.3\%/53.7\%\), recall \(85.0\%/81.8\%\), F1 \(63.4\%/61.3\%\)). Error-profile analysis showed substantially fewer false acceptances of biased systems under RFR. Additional sensitivity analyses on panel size (\(m\)) and non-inferiority quantile (\(q\)) showed that \(q\) is the dominant permissiveness lever, while \(m\) effects are context-dependent and should be checked explicitly.
 
 \textbf{Interpretation:}\\
-RFR provides a transparent acceptance criterion aligned with safety-first deployment: accept an AI only when its disagreement pattern remains within empirically observed expert variability. The approach complements training-time robustness methods, supports ablations, and open the path to richer text structurations (e.g., FHIR-like forms) evaluation by substituting Hamming with semantics-aware distances. Given the stakes, we argue that variability-aware acceptance testing of this kind should always precede deployment of any AI text classifier impacting patient care.
+RFR provides a transparent acceptance criterion aligned with safety-first deployment: accept an AI only when its disagreement pattern remains within empirically observed expert variability at a clinically pre-specified human quantile. Consensus-percentile reporting complements this binary decision with an interpretable continuous score. The approach complements training-time robustness methods, supports ablations, and opens the path to evaluating richer text structuring targets (e.g., FHIR-like forms) by substituting Hamming with semantics-aware distances. Given the stakes, variability-aware acceptance testing of this kind should be integrated into pre-deployment evaluation of AI text classifiers that can affect patient care.
 \end{abstract}
 
 
@@ -49,23 +59,23 @@ RFR provides a transparent acceptance criterion aligned with safety-first deploy
 \section{Quick Start \& Formulas}
 \subsection{General Notation}
 \begin{itemize}
-    \item $\mathcal{D} = \{d_1, \dots, d_{n_d}\}$: A set of $n_d$ documents.
-    \item $\mathcal{C} = \{c_1, \dots, c_{n_c}\}$: A set of $n_c$ categories.
+    \item $\mathcal{D} = \{d_1, \dots, d_{n_d}\}$: A set of $n_d=|\mathcal{D}|$ documents.
+    \item $\mathcal{C} = \{c_1, \dots, c_{n_c}\}$: A set of $n_c=|\mathcal{C}|$ categories.
     \item $\Omega = \{0,1\}^{n_d \times n_c}$: The space of \textbf{all} possible classifications.
 \end{itemize}
 
 A \textbf{classification} $x \in \Omega$ is represented by a binary vector $(x_{j,k})$, where $x_{j,k} = 1$ if document $d_j$ is assigned to category $c_k$, and $x_{j,k} = 0$ otherwise.
 
-\noindent $\chi = \{h_1, \dots, h_m\} \subset \Omega$ denotes a \textit{collective} set of $m$ human experts, treated here as a \textbf{non-unique} gold standard.
+\noindent $\chi = \{h_1, \dots, h_m\} \subset \Omega$ denotes a \textit{collective} set of $m$ human experts, considered as a \textbf{non-unique} gold standard.
 
 \noindent We use the \textbf{Manhattan (Hamming) distance}, denoted $\mathrm{d}(x,y)$. For $x,y \in \Omega$:
 \begin{equation}
 \mathrm{d}(x,y) = \sum_{j=1}^{n_d} \sum_{k=1}^{n_c} \bigl|x_{j,k} - y_{j,k}\bigr|.
 \end{equation}
 
-\subsection{Rank from References :}
+\subsection{Rank from References}
 
-\subsubsection{Metric definition : $\rho_{\chi}(x)$}
+\subsubsection{Metric Definition: $\rho_{\chi}(x)$}
 For each annotator $h_i \in \chi$, we determine the rank of $\mathrm{d}(h_i,x)$ among $\{\mathrm{d}(h_i,h_j)\}_{j=1, j\neq i}^m \cup \{\mathrm{d}(h_i,x)\}$. Denote this value $\rho_i(x)$. We then aggregate:
 \begin{equation}
 \rho_{\chi}(x) = \frac{1}m\sum_{i=1}^m \rho_i(x).
@@ -74,13 +84,13 @@ For each annotator $h_i \in \chi$, we determine the rank of $\mathrm{d}(h_i,x)$ 
 
 Rank from References can be computed directly from pairwise Hamming distances among all participants (the humans and the candidate classifier). Subsequent sections illustrate how these values inform a go/no-go decision in sensitive domains like healthcare.
 
-\subsubsection{Mean disagreement rate estimator : Distance from References : $\Delta_{\chi}(x)$}
+\subsubsection{Mean Disagreement Rate Estimator: Distance from References $\Delta_{\chi}(x)$}
 
-This additional metric represents the absolute distance from references, in order to complement the interpretation of $\rho_{\chi}(x)$.
+This additional metric represents the absolute distance from references to complement the interpretation of $\rho_{\chi}(x)$.
 \begin{equation}
 \Delta_{\chi}(x) = \frac{1}{m}\sum_{i=1}^{m} \frac{\mathrm{d}(x, h_i)}{\,n_d \times n_c\,}.
 \end{equation}
-\noindent \textbf{Interpretation :} This is the \textit{mean distance} (weighted by $1/m$) between $x$ and the $m$ annotators, normalized into $[0,1]$ by dividing by $n_d \times n_c$. It indicates the mean disagreement rate between the evaluated classifier and human experts.
+\noindent \textbf{Interpretation:} This is the \textit{mean distance} (weighted by $1/m$) between $x$ and the $m$ annotators, normalized to $[0,1]$ by dividing by $n_d \times n_c$. It indicates the mean disagreement rate between the evaluated classifier and human experts.
 
 \section{Background}
 \subsection{Context and Literature Review}
@@ -100,7 +110,7 @@ Despite significant progress in label modeling and error correction, we lack \te
 \emph{"Does this AI’s classification pattern remain within the acceptable range demonstrated by our recognized experts?"}
 \end{quote}
 As Shojania \& Marang-van de Mheen (2020) argue, choosing whether to trust or reject an algorithmic system must be transparent and justifiable.
-In parallel, hospital adoption of AI—including LLM-based text tools—has accelerated, yet prevailing governance documents emphasize lifecycle management and general safety principles rather than \emph{variability-aware acceptance testing} for subjective, multi-annotator text tasks. Recent guidance and evaluations (WHO on LMMs, FDA draft guidance for AI-enabled software, NHS lessons from real-world AI evaluations, and international consensus on trustworthy AI) underscore the need for transparent, auditable evaluation but stop short of specifying metrics that test whether an AI’s disagreement pattern stays within expert variability envelopes \cite{who2025lmm,fda2025draft,nhs2024eval,futureai2025}. At the same time, the disruptive potential of LLMs makes operational text structuration newly plausible in clinical workflows, amplifying the risks of deploying systems judged only by consensus-centric metrics like F1 \cite{tam2024humanEval,singhal2023clinKnowledge,reddy2024genAI}. We address this gap because, in subjective clinical text settings, relying solely on traditional point metrics leaves us uneasy about operational deployment; our work instead advances an acceptance criterion explicitly tied to observed human–human variability.
+In parallel, hospital adoption of AI—including LLM-based text tools—has accelerated, yet prevailing governance documents emphasize lifecycle management and general safety principles rather than \emph{variability-aware acceptance testing} for subjective, multi-annotator text tasks. Recent guidance and evaluations (WHO on LMMs, FDA draft guidance for AI-enabled software, NHS lessons from real-world AI evaluations, and international consensus on trustworthy AI) underscore the need for transparent, auditable evaluation but stop short of specifying metrics that test whether an AI’s disagreement pattern stays within expert variability envelopes \cite{who2025lmm,fda2025draft,nhs2024eval,futureai2025}. At the same time, the disruptive potential of LLMs makes operational text structuring newly plausible in clinical workflows, amplifying the risks of deploying systems judged only by consensus-centric metrics such as F1 \cite{tam2024humanEval,singhal2023clinKnowledge,reddy2024genAI}. We address this gap because, in subjective clinical text settings, reliance on traditional point metrics alone remains insufficient for deployment decisions; our work instead advances an acceptance criterion explicitly tied to observed human–human variability.
 
 
 
@@ -117,12 +127,12 @@ In parallel, hospital adoption of AI—including LLM-based text tools—has acce
 In response, we propose two complementary metrics---\(\rho_{\chi}(x)\) and \(\Delta_{\chi}(x)\)---rooted in a \textbf{collective} gold standard \(\chi\). Section~\ref{sec:methods} details these metrics and shows how they align with the demands of real-world, high-stakes classification.
 
 \subsection{Scope of Application}
-\label{sec\:scope}
+\label{sec:scope}
 
 This work targets the evaluation of automated classifiers in multi-annotator clinical text settings under safety-first constraints. Precisely, the intended scope is:
 
 \paragraph{Task type.}
-Binary (boolean) \emph{per-category} document classification with \emph{non-exclusive} labels (multi-label). Each category is an independent yes/no decision at the document level.
+Binary (boolean) \emph{per-category} document classification with \emph{non-exclusive} labels (multi-label). Each category is a yes/no decision at the document level, and an annotator may assign a document to any subset of categories (including none or all).
 
 \paragraph{Input modality.}
 Unstructured clinical narratives (e.g., resuscitation reports, progress notes, discharge summaries). Structured fields may be present in the record but are not required and are treated only insofar as they appear in text.
@@ -170,15 +180,15 @@ Exclusive multiclass classification, regression/score prediction, causal inferen
    A straightforward count of how many bits (document--category associations) differ between $x$ and $y$. \newline \textit{Rationale}: Hamming distance in $\{0,1\}$ is highly interpretable, aligns with purely discrete categories, and avoids complexities inherent to continuous embeddings or weighting.
 \end{enumerate}
 
-\subsection{W: Human Experts space Construction and Approximation}\label{sec:Wconstruction}
+\subsection{W: Human-Expert Space Construction and Approximation}\label{sec:Wconstruction}
 
-The set \( W \) represents the \textit{theoretical space of acceptable classifications}, capturing the inherent variability and pluralism of expert annotations. Formally, it is constructed as a subset of the total classification space \( \Omega = \{0,1\}^{n_d \times n_c} \), constrained by the empirical range of human disagreement. Unlike conventional gold-standard approaches that assume a single correct classification, we define \( W \) such that any classification \( x \in \Omega \) belongs to \( W \) if and only if, for every expert \( h_1 \in \chi \), $x$ is no farther to $h_1$ than at least an another expert \( h_2 \in \chi \).
+The set \( W \) represents the \textit{theoretical space of acceptable classifications}, capturing the inherent variability and pluralism of expert annotations. Formally, it is constructed as a subset of the total classification space \( \Omega = \{0,1\}^{n_d \times n_c} \), constrained by the empirical range of human disagreement. Unlike conventional gold-standard approaches that assume a single correct classification, we define \( W \) such that any classification \( x \in \Omega \) belongs to \( W \) if and only if, for every expert \( h_1 \in \chi \), $x$ is no farther from $h_1$ than at least one other expert \( h_2 \in \chi \).
 
 \begin{equation}
 W = \Bigl\{ x \in \Omega \mid \forall h_1 \in \chi, \; \exists h_2 \in \chi, h_2 \neq h_1 , \mathrm{d}(h_1, x) \leq \mathrm{d}(h_1, h_2) \Bigr\}.
 \end{equation}
 
-This formulation ensures that \( W \) is \textit{empirically grounded}, encompassing all classifications that lie within the natural scope of human expert disagreement. Theoretically, \( W \) can be understood as a \textit{non-parametric, data-driven manifold} in the high-dimensional binary classification space, where boundaries are implicitly defined by human variability rather than arbitrary thresholds. This construction guarantees that any classification within \( W \) is \textit{indistinguishable from human-level variation}, while classifications outside \( W \) exhibit divergences exceeding known inter-annotator disagreement. Thus, \( W \) serves as a \textit{pragmatic and operational proxy for acceptable classification uncertainty}, balancing mathematical rigor with practical interpretability in high-stakes decision-making domains. In essence, \emph{"a classification $x$ is acceptable if, for every expert $h_1\in\chi$, $x$ is a better consensus than at least another expert"}
+This formulation ensures that \( W \) is \textit{empirically grounded}, encompassing all classifications that lie within the natural scope of human expert disagreement. Theoretically, \( W \) is a \textit{non-parametric, data-driven set} in high-dimensional binary classification space, where boundaries are defined by observed human variability rather than arbitrary thresholds. Classifications within \( W \) are therefore \textit{indistinguishable from human-level variation}, while classifications outside \( W \) exhibit divergences beyond known inter-annotator disagreement. Thus, \( W \) provides a \textit{pragmatic and operational basis for acceptable classification uncertainty}, balancing mathematical rigor with practical interpretability in high-stakes decision-making domains. In essence, \emph{"a classification $x$ is acceptable if, for every expert $h_1\in\chi$, $x$ is closer to $h_1$ than at least one other expert is"}.
 
 \begin{enumerate}
 \item \textbf{Alternatives}: spheres or convex hull\\
@@ -260,7 +270,7 @@ for readability (or the normalized $\tilde{\rho}_{\chi}(x)$). If $\max_{i,d} r_{
 Let $\chi=\{h_1,\dots,h_m\}\subset\Omega$ and let $\mathrm{d}$ be the Hamming distance on $\Omega$.
 Define
 \[
-W \;=\; \Bigl\{x\in\Omega:\ \forall i\ \exists j\neq i\ \text{such that}\ \mathrm{d}(h_i,x)\le \mathrm{d}(h_i,h_j)\Bigr\}.
+W \;=\; \Bigl\{x\in\Omega:\ \forall i,\ \exists j\neq i,\ \mathrm{d}(h_i,x)\le \mathrm{d}(h_i,h_j)\Bigr\}.
 \]
 For each $i$, define the (corpus-level) per-reference rank
 \[
@@ -273,7 +283,7 @@ Then:
 \end{enumerate}
 The proof follows by noting that $j\neq i$ is excluded from self-comparisons and that at least one peer must be as far or farther than $x$ for membership in $W$.
 
-\subsubsection{Confidence Intervals (document-level aggregation).}
+\subsubsection{Confidence Intervals (Document-Level Aggregation)}
 We assume between-document variability dominates within-document category variability.
 Accordingly, for a summary metric $\theta\in\{\Delta_{\chi},\rho_{\chi}\}$, define the per-document values
 $\theta_d$ (i.e., $\theta_d\in\{\Delta_d,\rho_d\}$) and their mean $\bar{\theta}=\tfrac{1}{n_d}\sum_{d=1}^{n_d}\theta_d$.
@@ -304,7 +314,8 @@ variability across documents without relying on normality assumptions.
 \end{enumerate}
 In summary:
 \begin{itemize}
-\item \textbf{No} hyperparameters.
+\item \textbf{No model-tuned} acceptance hyperparameters.
+\item \textbf{One clinical calibration parameter} ($q$), pre-specified from deployment constraints.
 \item \textbf{Reflects} genuine variation in $\chi$.
 \item \textbf{Derives} two metrics---$\Delta_{\chi}$ and $\rho_{\chi}$---positioning a new classifier within the inter-annotator space.
 \end{itemize}
@@ -313,34 +324,39 @@ In summary:
 \subsection{Decision Rule: Non-Inferiority and Superiority}
 \begin{enumerate}
     
-\item \textbf{Step 1 — Non-inferiority via two confidence bounds.}
+\item \textbf{Step 1 --- Quantile-based non-inferiority via two confidence bounds.}
 
-    Let $(L_{AI}, U_{AI})$ be the normalised Rank-from-References (lower is better) 95\%CI\footnote{Any randomly selected run is valid. Run-to-run noise is negligible if Krippendorff’s $\alpha_{AI}$ is high, due to design effect. Therefore extra runs do not materially shrink the CI.}.
+    Let $(L_{AI}, U_{AI})$ be the normalized Rank-from-References (lower is better) \((1-\alpha)\) bootstrap CI.
 
-    Denote by $(L_{worst}, U_{worst})$ the \emph{worst} human’s $95\%$ CI.\footnote{The worst human is the expert with the highest mean RFR. Using its CI as the margin introduces \emph{no} external hyper-parameter. Each human is evaluated as an outer non-expert classifier.}
-    Non-inferiority (and cluster membership) holds if :
+    For each human expert $h_i$, compute the upper \((1-\alpha)\) bootstrap CI bound \(U_i\) by treating $h_i$ as an external candidate against $\chi\setminus\{h_i\}$. Let $\{U_i\}_{i=1}^m$ denote these human reference values, and define the non-inferiority threshold as the clinically pre-specified quantile:
 \[
-L_{AI} < L_{worst}\quad\text{and}\quad
-U_{AI} < U_{worst}. \tag{Two one-sided tests, $\alpha$ risk = 0.05}\footnote{We explicitly avoid a Kolmogorov–Smirnov two-sample test—its continuity assumption is violated by our tied, discrete $\rho_{\chi}$ ranks, it provides no clinically interpretable tolerance margin, and it would paradoxically penalise an  algorithm’s tighter (more repeatable) distribution\cite{conover1972}.}
+T_q = Q_q\big(\{U_i\}_{i=1}^m\big), \qquad q\in(0,1].
+\]
+    Non-inferiority holds if:
+\[
+L_{AI} < T_q\quad\text{and}\quad
+U_{AI} < T_q. \tag{Two one-sided tests at level $\alpha$}\footnote{We avoid a Kolmogorov--Smirnov two-sample test because tied discrete $\rho_{\chi}$ ranks violate its continuity assumptions and it does not provide a directly interpretable tolerance margin in this context \cite{conover1972}.}
 \]
 
-\item \textbf {Step 2 — Superiority (optional).} \\
+\item \textbf{Step 2 --- Superiority (optional).} \\
 
-    If non-inferiority is satisfied, we perform a paired two-sample $t$-test across documents:
+    If non-inferiority is satisfied, we test superiority against a concrete quantile anchor expert using a paired bootstrap on per-document rank differences. Let \(i_q=\arg\min_i |U_i-T_q|\) (human closest to the quantile threshold), with deterministic tie-break by smallest expert index. The anchor \(i_q\) is fixed from the original sample (not re-selected inside bootstrap resamples), and \(\rho_d^{(q)}\) denotes this anchor human's document-level rank trajectory when evaluated externally against \(\chi\setminus\{h_{i_q}\}\).
 
 \[
-H_0: \bar \rho_{\chi AI} \ge \bar \rho_{\chi worst}\quad\text{vs}\quad
-H_1: \rho_{\chi AI} < \bar \rho_{\chi worst}.
+\delta_d=\rho_d^{AI}-\rho_d^{(q)}, \qquad \bar{\delta}=\frac{1}{n_d}\sum_{d=1}^{n_d}\delta_d.
 \]
 
-    Algorithmic \textbf{superiority} is declared at $\alpha=0.05$ only when both non-inferiority and the $t$-test reject $H_0$.
+Let \([L_\delta,U_\delta]\) be the percentile \((1-\alpha)\) CI of \(\bar{\delta}\) from document-level bootstrap resampling.
+Superiority is declared if \(U_\delta<0\).
+
+    Algorithmic \textbf{superiority} is declared only when both non-inferiority and this bootstrap condition hold.
 
 \item \textbf{Practical phrasing for non-statisticians.}\\
-    The model is accepted if its best- and worst-case disagreement rates are better than those of at least one expert; it is called \emph{better than humans} when it also does in average better than at least one expert.
+    The model is accepted if its disagreement profile stays below a clinically chosen human reference quantile; it is called \emph{better than humans} when it also outperforms this quantile anchor in paired document-level comparison.
 \end{enumerate}
 
 \section{Evaluative Simulation}
-In order to evaluate the ability of $\rho_{\chi}$ to discriminate intra-$W$ AIs from biased ones, we proceeded to an in-silico evaluation versus the widely use alternatives : global F1-score and mean F1-scores from each humans. 
+To evaluate the ability of $\rho_{\chi}$ to discriminate intra-$W$ AIs from biased ones, we conducted an in~silico evaluation against widely used alternatives: Majority-F1 and Average pairwise F1.
 
 \subsection{Model Choice}
 
@@ -351,15 +367,15 @@ Following a pilot labeling session on $n=50$ resuscitation reports across $k=11$
 (iii) \emph{institutional calibration} (“our unit is stricter on \textit{X} than others”);
 (iv) \emph{individual thresholds that drift within a shift} (“after twenty charts my bar changes—fatigue, time pressure, or warming-up”); and
 (v) \emph{annotator-specific noisiness} (“some colleagues are consistently sharper on \textit{A} than \textit{B}”).
-Clinicians also emphasized that each category is a binary decision at the point of annotation (checked vs.\ not checked), even when clinically they represent graded phenomena. These observations called for a binary, multi-label simulator that is interpretable at the level of odds/thresholds, yet flexible enough to capture temporal drift, institutional effects, and latent text structure.
+Clinicians also emphasized that each category is a binary decision at the point of annotation (checked vs.\ not checked), even when categories represent graded clinical phenomena. These observations called for a binary, multi-label simulator that is interpretable in terms of odds and thresholds, yet flexible enough to capture temporal drift, institutional effects, and latent text structure.
 
 \paragraph{Why a logistic, additively-separable linear predictor.}
-A logit link offers a clinically intuitive \emph{odds-ratio} interpretation and supports additive contributions on the log-odds scale. Additivity mirrors how clinicians described their reasoning: a baseline tendency modulated by text evidence, then nudged up or down by institutional habits and personal thresholds. Concretely, we model a logistic model, each term being directly motivated by interview themes:
+A logit link offers a clinically intuitive \emph{odds-ratio} interpretation and supports additive contributions on the log-odds scale. Additivity mirrors how clinicians described their reasoning: a baseline tendency modulated by text evidence, then nudged up or down by institutional habits and personal thresholds. We therefore use a logistic model, with each term directly motivated by interview themes:
 
 \begin{itemize}
 \item \textbf{Base prevalence}. Captures category-specific baseline odds noted by clinicians (theme i), ensuring realistic marginal prevalences.
 \item \textbf{Text effect.} Latent text factors plus residual encode “wording that forces boxes together” (theme ii), allowing shared linguistic cues and category co-activation without hand-crafted rules.
-\item \textbf{School (institution) effect.} Doctors reported systematic unit-level calibration differences (theme iii); fixed contrasts per institution reproduce these reproducible shifts in thresholds across services.
+\item \textbf{Institutional-group effect.} Doctors reported systematic unit-level calibration differences (theme iii); fixed contrasts per institution reproduce these shifts in thresholds across services.
 \item \textbf{Annotator$\times$category drift.} Fixed bias captures stable personal thresholds (theme v); a linear trend reflects warming-up or fatigue across a session (theme iv); a session-reset random walk adds non-stationary fluctuations clinicians described (“bar changes”).
 \item \textbf{Annotator global drift.} Some tendencies are cross-category, being globally stricter/lenient as the shift progresses (themes iv–v).
 \item \textbf{Annotator–category scale.} Interviews highlighted that some annotators are not only biased but also \emph{noisier} on specific categories. A scale factor permits heteroscedastic variability and calibration differences beyond mean shifts; the deterministic setting sets $s_{a,k}=1$, while stochastic regimes can inflate or shrink variability as observed in practice.
@@ -374,28 +390,28 @@ We examined several modeling families:
 \begin{itemize}
 \item \emph{Static Dawid–Skene / item-difficulty only.} These EM-based annotator models capture confusability but assume stationarity; they cannot reproduce within-shift drift (themes iv–v) without substantial extensions, and they do not natively encode text-driven co-activations (theme ii).
 \item \emph{IRT (Rasch/2PL/3PL) and ordinal IRT.} Powerful for \emph{single} latent trait per item; our multi-label setting with category-specific institutional and temporal effects requires many traits and time dynamics, undermining interpretability and identifiability at $n=50$.
-\item \emph{Probit GLMM.} Statistically similar to logit but less directly interpretable for clinicians (odds vs.\ z-scores). The logistic link also simplifies calibration to observed odds and yielded more stable simulation control in our setting.
+\item \emph{Probit GLMM.} Statistically similar to logit. In our setting, the logistic link simplified calibration to observed odds and yielded more stable simulation control.
 \item \emph{Hidden Markov/State-space drift models.} They capture non-stationarity but at the cost of additional latent states, transition matrices, and identifiability issues in short sessions; interviews suggested smooth drifts and occasional jitters rather than discrete regime switches.
 \item \emph{Nonparametric (GPs, copulas) or black-box simulators.} These can match distributions but reduce transparency, making it harder to attribute failures to specific phenomena (contrary to our need for method stress-testing and ablation).
-\item \emph{Graphical/Ising multilabel models.} They encode inter-category dependence but complicate the inclusion of school and time-varying annotator effects; the added complexity was not justified by interview-reported patterns.
+\item \emph{Graphical/Ising multilabel models.} They encode inter-category dependence but complicate the inclusion of institutional-group and time-varying annotator effects; the added complexity was not justified by interview-reported patterns.
 \end{itemize}
 
-\paragraph{Balance of realism, interpretability, and tractability.}
-The chosen \emph{logistic, additively separable, hierarchical} specification directly mirrors clinicians’ narratives (thresholds on odds, additive nudges), isolates phenomena of interest for ablation (text, school, personal bias, drift, noise), and remains computationally tractable. It generates binary multi-label annotations with realistic marginal prevalences, cross-category text couplings, institution-level calibration, and time-varying annotator behavior—precisely the ingredients identified during interviews—while keeping parameters interpretable and empirically estimable in subsequent sections.
+\paragraph{Balance of realism, interpretability, and computational tractability.}
+The chosen \emph{logistic, additively separable, hierarchical} specification directly mirrors clinicians’ narratives (thresholds on odds, additive nudges), isolates phenomena of interest for ablation (text, institutional-group effects, personal bias, drift, noise), and remains straightforward to compute. It generates binary multi-label annotations with realistic marginal prevalences, cross-category text couplings, institution-level calibration, and time-varying annotator behavior---precisely the ingredients identified during interviews---while keeping parameters interpretable and empirically estimable in subsequent sections.
 
 
 \subsection{Model Formalisation}
 \label{sec:model}
 
 
-In order to evaluate our methodology under controlled yet realistic
+To evaluate our methodology under realistic
 conditions, we developed a generative model of human annotation
-behavior. The model is designed to capture the main sources of
+behavior. The model captures the main sources of
 variability and bias observed in real-world multi-annotator
 classification tasks, while remaining tractable and interpretable.
 
-Formally, for each text $i \in \{1,\dots,n\}$, category
-$k \in \{1,\dots,c\}$ and annotator $a \in \{1,\dots,m\}$, we assume
+Formally, for each text $i \in \{1,\dots,n_d\}$, category
+$k \in \{1,\dots,n_c\}$ and annotator $a \in \{1,\dots,m\}$, we assume
 a binary annotation $X_{i,k,a} \in \{0,1\}$ arises from a logit–additive
 model:
 \[
@@ -410,7 +426,7 @@ setting). The linear predictor is decomposed as
 \eta_{i,k,a} \;=\; 
 \underbrace{\mu_k}_{\text{base prevalence}} +
 \underbrace{S_{i,k}}_{\text{text effect}} +
-\underbrace{E_{g(a),k}}_{\text{school effect}} +
+\underbrace{E_{g(a),k}}_{\text{institutional-group effect}} +
 \underbrace{A_{i,k,a}}_{\text{annotator $\times$ category drift}} +
 \underbrace{B_{i,a}}_{\text{annotator global drift}} .
 \]
@@ -429,8 +445,8 @@ $S_{i,k} = z_i^\top \beta_{:,k} + \eta_{i,k}$. This captures the fact
 that some texts are intrinsically more likely to trigger certain
 categories.
 
-\paragraph{School effect.}  
-Annotators are grouped into ``schools'' or institutions, each with
+\paragraph{Institutional-group effect.}  
+Annotators are grouped into institutions/services, each with
 systematic biases $E_{r,k}$ on category $k$, parameterized by a
 contrast $\pm \tfrac{1}{2}\,\text{school\_contrast}$. This reflects
 realistic institution-level calibration differences.
@@ -468,7 +484,7 @@ The full parameter set governing the generative process is
 \]
 
 \medskip
-This hierarchical, logit-additive model provides a principled proxy
+This hierarchical, logit-additive model provides a principled framework
 for human annotations: it reproduces the interplay of (i) intrinsic
 text difficulty, (ii) systematic institutional biases, (iii) individual
 annotator biases and drifts, and (iv) random temporal variability.
@@ -484,7 +500,7 @@ To ensure that our simulation model does not rely on arbitrary priors, we empiri
 estimated the plausible ranges of hyperparameters from real human classifications. 
 Specifically, six intensive care unit (ICU) practitioners independently applied eleven 
 inclusion criteria to a set of fifty anonymized medical documents. This corpus provided a 
-controlled yet realistic benchmark of inter-annotator variability in a high-stakes domain.
+realistic benchmark of inter-annotator variability in a high-stakes domain.
 
 The resulting human classification matrices (\(n=50\) documents, \(k=11\) categories, 
 \(m=6\) annotators) were aggregated to compute summary statistics such as mean prevalence, 
@@ -493,25 +509,25 @@ micro-F1 between annotators. These empirical descriptors were then used as targe
 inverse optimization procedure: a projected gradient-descent estimation of the logistic 
 model parameters (Section~\ref{sec:model}). By iteratively adjusting parameters until 
 simulated classifications reproduced the empirical statistics, we obtained realistic 
-estimates of the base prevalence (\(p_{\text{base}}\)), the scales of text, school, and 
+estimates of the base prevalence (\(p_{\text{base}}\)), the scales of text, institutional-group, and 
 annotator effects, as well as time-drift terms (\(\phi, \psi\)) and random walk 
-variabilities. Confidence intervals were computed across multiple random restarts to 
+variabilities. Bootstrap confidence intervals (percentile method) were computed across multiple random restarts to 
 capture the robustness of the fit.
 
 This procedure ensures that the hyperparameter ranges explored in our synthetic experiments 
 are anchored in actual human decision patterns rather than arbitrary choices. As a result, 
 the simulated distributions closely mirror the empirical variability observed among experts, 
-providing a reliable proxy for generating synthetic classifications in subsequent analyses.
+providing a reliable basis for generating synthetic classifications in subsequent analyses.
 
 \paragraph{Estimated ranges.}  
-Across 100 restarts of the optimization procedure, we obtained the following 95\% confidence 
-intervals for the key hyperparameters (mean ± 95\%~CI):
+Across 100 restarts of the optimization procedure, we obtained the following 95\% bootstrap confidence 
+intervals for the key hyperparameters (mean ± 95\% bootstrap CI):
 
 \begin{itemize}
   \item Base prevalence: \(p_{\text{base}} \approx 0.57 \,[0.50;0.64]\).
   \item Text–category coupling: \(\beta_{\text{scale}} \approx 1.22 \,[1.17;1.27]\).
   \item Residual text noise: \(\sigma_{\eta} \approx 0.51 \,[0.49;0.53]\).
-  \item School-level contrast: \(\text{school\_contrast} \approx 1.08 \,[0.86;1.30]\).
+  \item Institutional-group contrast: \(\text{school\_contrast} \approx 1.08 \,[0.86;1.30]\).
   \item Annotator bias spread: \(\alpha_{0,\text{sd}} \approx 0.25 \,[0.20;0.29]\).
   \item Category-specific fatigue/learning slope spread: \(\phi_{\text{sd}} \approx 0.30 \,[0.25;0.35]\).
   \item Global drift spread: \(\psi_{\text{sd}} \approx 0.26 \,[0.21;0.31]\).
@@ -522,7 +538,7 @@ intervals for the key hyperparameters (mean ± 95\%~CI):
 \end{itemize}
 
 These ranges confirm that expert variability is shaped not only by a baseline prevalence 
-level but also by substantial annotator- and school-specific effects, together with temporal 
+level but also by substantial annotator- and institutional-group-specific effects, together with temporal 
 drifts. Notably, the negative values of \(\phi_{\text{mean}}\) and \(\psi_{\text{mean}}\) 
 indicate a consistent tendency toward stricter classifications over the course of annotation 
 sessions, counterbalancing the relatively high base prevalence. This interplay highlights 
@@ -542,18 +558,18 @@ exploration grid (n=177147), the program generated classification matrices for:
 The human and \texttt{AI\_good} classifications were generated using the same
 distributional assumptions and hyperparameters, ensuring that the AI\_good agents
 differed from humans only through random draws. They therefore reflect plausible,
-non-biased automated annotators operating within the human variability manifold.
+unbiased automated annotators operating within the human-variability space.
 
 \paragraph{AI\_bad generation.}
 In contrast, \texttt{AI\_bad} agents were deliberately biased by assigning them
-distinct \emph{school effects}. Concretely, each biased AI was associated with a
-unique school vector $E_{r,k}$ applied across categories. The values of these
-school effects were drawn with larger contrasts than those observed among humans,
-and then normalised to ensure that each AI\_bad was clearly separated from the
+distinct \emph{institutional-group effects}. In practice, each biased AI was associated with a
+unique group vector $E_{r,k}$ applied across categories. The values of these
+group effects were drawn with larger contrasts than those observed among humans,
+and then normalized to ensure that each AI\_bad was clearly separated from the
 human annotators in the latent logit space. In practice, this amounts to shifting
-the log-odds for each category by an additional school-specific term of magnitude
+the log-odds for each category by an additional group-specific term of magnitude
 $\Delta \in [1.0,\,2.0]$. This procedure ensures that
-each \texttt{AI\_bad} systematically diverges from human-like behaviour while still
+each \texttt{AI\_bad} systematically diverges from human-comparable behavior while still
 producing coherent binary classifications.
 
 \paragraph{Grid exploration.}
@@ -564,7 +580,7 @@ combinatorial set of parameter configurations, each producing a full corpus of
 human and AI annotations. The entire set of results was subsequently aggregated
 for performance evaluation of the discrimination algorithms (Section~\ref{sec:algorithms-eval}).
 
-\subsection{Algorithms Performances Evaluation Methodology}
+\subsection{Algorithm Performance Evaluation Methodology}
 \label{sec:algorithms-eval}
 
 To assess whether each discrimination algorithm is able to distinguish unbiased AI models
@@ -576,32 +592,32 @@ where ground truth is explicitly known.
 
 \paragraph{Evaluation principle.}
 Each discrimination algorithm outputs a binary decision indicating whether a given AI
-classification is ``non-biased'' (i.e., comparable to humans) or ``biased'' (i.e., out of the
+classification is ``unbiased'' (i.e., comparable to humans) or ``biased'' (i.e., out of the
 acceptable human variability space). This prediction is compared against the known status
 (\texttt{AI\_good} as positives, \texttt{AI\_bad} as negatives), yielding a correctness matrix
 per configuration. Aggregating these decisions across all configurations allows computing
 the classical information retrieval measures of \emph{precision}, \emph{recall}, and
 \emph{F1-score} for each algorithm, with the target task being the correct identification of
 \texttt{AI\_good} models. The evaluation is repeated across all hyperparameter combinations,
-ensuring that performances are not driven by a particular set of simulation conditions but
+ensuring that performance estimates are not driven by a particular set of simulation conditions but
 reflect the robustness of each method.
 
 \paragraph{Algorithms under study.}
-We implemented and compared four complementary discrimination strategies:
+We implemented and compared three complementary discrimination strategies:
 
 \begin{enumerate}
   \item \textbf{Rank from References (RFR).} 
 
-  \item \textbf{Global F1-score.}  
+  \item \textbf{Majority-F1.}  
   A strict majority vote among the six human annotators is used as a surrogate
   consensus. The F1-score of each actor (human or AI) against this consensus is
-  computed. An AI is predicted non-biased if its F1-score is at least as high as the
+  computed. An AI is predicted unbiased if its F1-score is at least as high as the
   worst human annotator’s F1-score.
 
-  \item \textbf{Iterative F1-score.}  
+  \item \textbf{Average pairwise F1.}  
   Each human is iteratively set as the reference; for each actor, the F1-score against
   this reference is computed. Scores are then averaged across all references. An AI
-  is predicted non-biased if its mean F1-score is greater or equal to the worst human
+  is predicted unbiased if its mean F1-score is greater than or equal to the worst human
   mean F1-score. This approach avoids privileging a single consensus and explicitly
   incorporates annotator plurality.
 
@@ -611,20 +627,34 @@ We implemented and compared four complementary discrimination strategies:
 For each algorithm, we saved: (i) the boolean correctness matrix across all
 configurations, (ii) per-configuration counts of true/false positives and negatives, and
 (iii) aggregate performance metrics (precision, recall, F1-score). This comprehensive
-setup enables a robust comparison of the algorithms’ ability to generalise across
+setup enables a robust comparison of the algorithms’ ability to generalize across
 different annotation regimes while remaining faithful to the diversity observed in
 human experts.
 
+\paragraph{Sensitivity protocol for panel size and quantile threshold.}
+To evaluate robustness of the decision rule, we performed an additional sweep varying panel size
+\(m\in\{3,4,5,6,8,10,12\}\) and non-inferiority quantile \(q\in\{0.75,0.9,1.0\}\), where \(q=1.0\)
+corresponds to the most permissive quantile anchor. For each \((m,q)\) cell, 60 independent replicates were
+simulated with the same data-generating framework, and uncertainty was propagated with
+document-level bootstrap (\(B=200\), \(\alpha=0.05\)). We report acceptance rate of biased AIs,
+specificity, recall, and threshold statistics per cell.
+
 \subsection{In Silico Results}
 
-Across the full hyperparameter grid ($N=2{,}125{,}764$ AI classifications), \textit{Rank from References} exhibited a more conservative operating profile than F1-based criteria. RFR prioritized specificity—i.e., rejecting biased ($AI_{bad}$) classifiers that fall outside the human-variability manifold—whereas F1-based rules maximized recall—i.e., accepting more unbiased ($AI_{good}$) classifiers. Concretely, RFR reached \textbf{specificity $45.9\%$}, \textbf{precision $58.2\%$}, \textbf{recall/sensitivity $60.7\%$}, and \textbf{F1 $54.9\%$}; by comparison, the Global-F1 rule achieved $20.5\%$ specificity, $53.7\%$ precision, $81.8\%$ recall, and $61.3\%$ F1, while the Iterative-F1 rule achieved $21.9\%$ specificity, $55.3\%$ precision, $85.0\%$ recall, and $63.4\%$ F1. Overall accuracy remained comparable across methods (RFR $53.3\%$, Iterative-F1 $53.4\%$, Global-F1 $51.2\%$), and Matthews correlation coefficients were modest (RFR $0.066$, Iterative-F1 $0.088$, Global-F1 $0.030$), underscoring the difficulty of the discrimination task under broad, realistic annotator variability.
+Across the full hyperparameter grid ($N=2{,}125{,}764$ AI classifications), \textit{Rank from References} exhibited a more conservative operating profile than F1-based criteria. RFR prioritized specificity---i.e., rejecting biased ($AI_{bad}$) classifiers that fall outside the human-variability space---whereas F1-based rules maximized recall---i.e., accepting more unbiased ($AI_{good}$) classifiers. RFR reached \textbf{specificity $45.9\%$}, \textbf{precision $58.2\%$}, \textbf{recall/sensitivity $60.7\%$}, and \textbf{F1 $54.9\%$}; by comparison, the Majority-F1 rule achieved $20.5\%$ specificity, $53.7\%$ precision, $81.8\%$ recall, and $61.3\%$ F1, while the Average pairwise F1 rule achieved $21.9\%$ specificity, $55.3\%$ precision, $85.0\%$ recall, and $63.4\%$ F1. Overall accuracy remained comparable across methods (RFR $53.3\%$, Average pairwise F1 $53.4\%$, Majority-F1 $51.2\%$), and Matthews correlation coefficients were modest (RFR $0.066$, Average pairwise F1 $0.088$, Majority-F1 $0.030$), underscoring the difficulty of the discrimination task under broad, realistic annotator variability.
 
-From a safety perspective, the error profiles are instructive. Relative to Iterative-F1, RFR \emph{reduced false acceptances of biased AIs} ($FP$) by $\mathbf{254{,}810}$ (from $830{,}297$ to $575{,}487$), but also \emph{accepted fewer unbiased AIs} ($TP$) by $\mathbf{257{,}937}$ (from $903{,}032$ to $645{,}095$)—a deliberate trade-off toward conservatism that aligns with our $W$-set acceptance principle and the two–CI non-inferiority rule. In other words, RFR is more reluctant to certify an algorithm as “human-like” unless its disagreement patterns remain consistently within previously observed expert–expert divergences, thereby lowering the risk of endorsing systematically biased models.
+From a safety perspective, the error profiles are instructive. Relative to Average pairwise F1, RFR \emph{reduced false acceptances of biased AIs} ($FP$) by $\mathbf{254{,}810}$ (from $830{,}297$ to $575{,}487$), i.e.\ a relative reduction of about \(30.7\%\), but also \emph{accepted fewer unbiased AIs} ($TP$) by $\mathbf{257{,}937}$ (from $903{,}032$ to $645{,}095$), i.e.\ about \(28.6\%\) fewer true positives. This deliberate trade-off toward conservatism aligns with our $W$-set acceptance principle and the two-CI non-inferiority rule. In other words, RFR is more reluctant to certify an algorithm as ``human-comparable'' unless its disagreement patterns remain consistently within expert--expert divergences observed in the reference panel, thereby lowering the risk of endorsing systematically biased models.
 
-\paragraph{performance variation across model configurations}
-Across the explored hyperparameter grid, performance metrics showed only small-amplitude fluctuations. Although several pairwise comparisons reached statistical significance—unsurprising given the large number of simulated decisions—the corresponding effect sizes were not clinically meaningful. The largest primary-metric deviation we observed was a modest F1 decrease of 0.05 for \textit{RFR} when increasing school contrast from 0.860 to 1.300; all other shifts remained within smaller narrow bands. Taken together, these results indicate that the in silico conclusions are stable with respect to reasonable hyperparameter perturbations, with no clinically relevant degradation in performance across model configurations.
+\paragraph{Consensus percentile reporting.}
+Beyond binary acceptance, we report the normalized micro-RFR score as a consensus percentile. If $\tilde{\rho}_{\chi}(x)=p$, the system can be described as behaving around the $100p$-th percentile of expert-referenced disagreement ranks. This provides an interpretable continuous layer on top of the go/no-go rule and facilitates communication with non-statistical stakeholders.
 
-\paragraph{Practical takeaway.} For high-throughput screening, Iterative-F1 offers a higher yield (recall) of candidate non-biased AIs. However, for \emph{go/no-go} decisions in safety-critical settings, RFR’s higher specificity and precision make it a more suitable gatekeeper: it preferentially rejects out-of-manifold behaviors and accepts only those classifiers whose disagreement envelopes remain \emph{within} credible expert variability.
+\paragraph{Sensitivity to panel size $m$ and non-inferiority quantile $q$.}
+Using the protocol described above, results show that permissiveness is strongly driven by $q$: the mean acceptance rate of biased AIs ranged from $27.5\%$ to $84.4\%$ for $q=0.75$, from $43.3\%$ to $90.0\%$ for $q=0.9$, and from $62.8\%$ to $91.1\%$ for $q=1.0$. For fixed $q$, increasing $m$ did not induce a monotonic inflation in all regimes, but generally improved specificity at conservative quantiles (e.g., at $q=0.75$, specificity increased from $15.6\%$ at $m=3$ to $72.5\%$ at $m=12$, while recall decreased from $98.1\%$ to $80.3\%$). Overall, these analyses support treating $q$ as the primary clinical lever and interpreting $m$ effects through explicit sensitivity checks rather than assumptions of fixed permissiveness.
+
+\paragraph{Performance variation across model configurations.}
+Across the explored hyperparameter grid, performance metrics showed only small-amplitude fluctuations. Although several pairwise comparisons reached statistical significance---unsurprising given the large number of simulated decisions---the corresponding effect sizes were not clinically meaningful. The largest primary-metric deviation we observed was a modest F1 decrease of 0.05 for \textit{RFR} when increasing institutional-group contrast (\texttt{school\_contrast}) from 0.860 to 1.300; all other shifts remained within smaller narrow bands. Taken together, these results indicate that the in silico conclusions are stable with respect to reasonable hyperparameter perturbations, with no clinically relevant degradation in performance across model configurations.
+
+\paragraph{Practical takeaway.} For high-throughput screening, Average pairwise F1 offers a higher yield (recall) of candidate unbiased AIs. However, for \emph{go/no-go} decisions in safety-critical settings, RFR’s higher specificity and precision make it a more suitable gatekeeper: it preferentially rejects out-of-space behaviors and accepts only those classifiers whose disagreement envelopes remain \emph{within} credible expert variability.
 
 
 
@@ -638,13 +668,13 @@ Across the explored hyperparameter grid, performance metrics showed only small-a
 \paragraph{Relation to existing families.}
 Work on disagreement and imperfect supervision broadly spans three strands. First, \emph{latent-label inference} and annotator modeling estimate unobserved “true” labels from discordant raters (e.g., Dawid–Skene and its diagnostic-test analogs) \cite{dawid1979maximum,hui1980study}, as well as Bayesian formulations that place priors on annotator reliability or smooth the empirical label distribution to reflect uncertainty \cite{chou2019,fornaciari2021}. Second, \emph{learning with noisy labels} focuses on training-time robustness (co-teaching, bootstrapping, consistency regularization), synthesizing theoretical and empirical advances \cite{garg2021,han2022,han2023,frenay2014,cannings2018}. Third, \emph{embedding and nearest-neighbor} approaches evaluate or retrieve by distances in representation spaces rather than by exact matches \cite{disalvo2024}. While these families are valuable, they seldom offer an operational, auditable \emph{go/no-go} rule for deployment when truth is \emph{plural} and disagreement among competent experts is expected—a situation extensively discussed in perspectivist NLP \cite{basile2021} and in patient-safety research that cautions against brittle single-number conclusions \cite{shojania2020}.
 
-\textit{Rank from References} (RFR) addresses this gap by (i) constructing an empirically grounded human-variability envelope $W$ from expert–expert distances, (ii) ranking a candidate system against each reference via a simple distance statistic, and (iii) deciding acceptance through a non-inferiority ladder with confidence intervals, eschewing extra thresholds. In spirit, this is closer to a nonparametric, distribution-aware comparison of discrepancy ranks than to consensus relabeling, akin to rank-based reasoning used for discontinuous or discrete outcomes \cite{conover1972}. Unlike standard F1 checks against an inferred consensus, RFR preserves the \emph{plurality} of competent judgments and evaluates whether the system operates \emph{within} that envelope.
+\textit{Rank from References} (RFR) addresses this gap by (i) constructing an empirically grounded human-variability envelope $W$ from expert--expert distances, (ii) ranking a candidate system against each reference via a simple distance statistic, and (iii) deciding acceptance through a non-inferiority ladder with confidence intervals, eschewing extra thresholds. In spirit, this is closer to a nonparametric comparison of discrepancy ranks than to consensus relabeling, akin to rank-based reasoning used for discontinuous or discrete outcomes \cite{conover1972}. Unlike standard F1 checks against an inferred consensus, RFR preserves the \emph{plurality} of competent judgments and evaluates whether the system operates \emph{within} that envelope.
 
 \paragraph{Why RFR fits our scope.}
 Our application is multi-label, document-level, binary classification with non-exclusive clinical categories and multiple credible annotators. In this regime, distances over $\{0,1\}^{n_d\times n_c}$ (e.g., Hamming) are transparent, easy to audit, and map directly to “bits flipped” across documents and categories—properties that clinicians readily interpret. RFR’s acceptance rule, anchored in human–human variability, complements noisy-label training remedies \cite{han2022,han2023,frenay2014} and avoids collapsing disagreement into a single “gold” label \cite{dawid1979maximum,hui1980study,chou2019,fornaciari2021}. The emphasis on specificity to biased behavior aligns with safety-first evaluation in clinical AI \cite{shojania2020} and with recent perspectives advocating logically consistent, variance-aware assessment of LLM outputs \cite{SLCA}.
 
 \paragraph{Toward generalized RFR for rich text structurations.}
-Clinical text extraction frequently targets \emph{structured} outputs (e.g., FHIR-like forms) with many semantically related fields. In these settings, exact-match metrics can be misleading by penalizing near-miss codes as harshly as semantically distant errors. The RFR principle should extend naturally: retain the rank-based acceptance logic, but generalize the base distance $d(\cdot,\cdot)$ to be \emph{structure- and semantics-aware}. Options include cost-weighted set distances or ontology-path distances for hierarchical vocabularies, graph/optimal-transport–style discrepancies for many-to-many correspondences, and fieldwise compositions for heterogeneous forms—thus granting partial credit to semantically proximal alternatives and sharper penalties to distant ones. This mirrors the move from hard labels to perspective-aware distributions \cite{basile2021}, leverages robust distance design familiar to the noisy-label literature \cite{han2022,han2023,frenay2014}, and resonates with nearest-neighbor reasoning in high-dimensional embeddings when appropriate \cite{disalvo2024}. In short, a \emph{generalized RFR} with clinically informed distances could evaluate arbitrary text structurations with large category sets, where semantic proximity matters—avoiding the pitfalls of exact matching while preserving an auditable, parameter-light acceptance decision. We introduce the RFR reduced scope formalization in the present work, and call for future generalization.
+Clinical text extraction frequently targets \emph{structured} outputs (e.g., FHIR-like forms) with many semantically related fields. In these settings, exact-match metrics can be misleading by penalizing near-miss codes as harshly as semantically distant errors. The RFR principle should extend naturally: retain the rank-based acceptance logic, but generalize the base distance $d(\cdot,\cdot)$ to be \emph{structure- and semantics-aware}. Options include cost-weighted set distances or ontology-path distances for hierarchical vocabularies, graph/optimal-transport–style discrepancies for many-to-many correspondences, and fieldwise compositions for heterogeneous forms—thus granting partial credit to semantically proximal alternatives and sharper penalties to distant ones. This mirrors the move from hard labels to perspective-aware distributions \cite{basile2021}, leverages robust distance design familiar to the noisy-label literature \cite{han2022,han2023,frenay2014}, and resonates with nearest-neighbor reasoning in high-dimensional embeddings when appropriate \cite{disalvo2024}. In short, a \emph{generalized RFR} with clinically informed distances could evaluate arbitrary text structurations with large category sets, where semantic proximity matters—avoiding the pitfalls of exact matching while preserving an auditable, parameter-light acceptance decision.
 
 
 
@@ -653,13 +683,13 @@ Clinical text extraction frequently targets \emph{structured} outputs (e.g., FHI
 Our study has several strengths spanning design, methodology, and practical relevance.
 
 \paragraph{Clinically grounded simulation.}
-The simulator was constructed from semi-structured interviews with intensivists after a real labellisation session, and encodes the specific phenomena clinicians reported: heterogeneous base rates, text-driven co-activations, institution-level calibration, annotator-specific thresholds, and within-shift drift. This qualitative-to-quantitative pipeline yields synthetic data that preserve the qualitative texture of clinical annotation while remaining fully controllable for stress testing.
+The simulator was constructed from semi-structured interviews with intensivists after a real labeling session and encodes the specific phenomena clinicians reported: heterogeneous base rates, text-driven co-activations, institution-level calibration, annotator-specific thresholds, and within-shift drift. This qualitative-to-quantitative pipeline yields synthetic data that preserve the qualitative texture of clinical annotation while remaining fully controllable for stress testing.
 
 \paragraph{Interpretable, principled model structure.}
-The chosen logistic, additively separable specification provides direct odds-ratio interpretability and a transparent decomposition of effects (text, school, annotator$\times$category, global annotator). Each term corresponds to an observable source of variability rather than a black-box proxy, enabling clear attribution of failure modes and targeted ablations. Importantly, all hyperparameters are used to express phenomena identified by clinicians; their values are estimated empirically rather than fixed arbitrarily, preserving interpretability without sacrificing flexibility.
+The chosen logistic, additively separable specification provides direct odds-ratio interpretability and a transparent decomposition of effects (text, institutional-group, annotator$\times$category, global annotator). Each term corresponds to an observable source of variability rather than a black-box proxy, enabling clear attribution of failure modes and targeted ablations. Importantly, all hyperparameters are used to express phenomena identified by clinicians; their values are estimated empirically rather than fixed arbitrarily, preserving interpretability without sacrificing flexibility.
 
 \paragraph{Safety-aligned evaluation criterion.}
-Rank from References (RFR) operationalizes a conservative acceptance rule that privileges \emph{specificity} to biased behavior over marginal gains in recall. By anchoring acceptance to the envelope of human–human disagreement and validating decisions with confidence-interval–based non-inferiority , the framework aligns with safety-first principles that are essential in clinical decision support. The resulting error profile—which reduces false acceptances of biased systems—better matches the asymmetric costs in real deployment.
+Rank from References (RFR) operationalizes a conservative acceptance rule that privileges \emph{specificity} to biased behavior over marginal gains in recall. By anchoring acceptance to the envelope of human–human disagreement and validating decisions with confidence-interval–based non-inferiority, the framework aligns with safety-first principles that are essential in clinical decision support. The resulting error profile---which reduces false acceptances of biased systems---better matches the asymmetric costs in real deployment.
 
 \paragraph{Calibration without new thresholds.}
 RFR relies on inter-expert disagreement structure (e.g., Hamming distances) rather than ad hoc probability thresholds or additional hyperparameters. This reduces tuning burden and the risk of overfitting acceptance criteria to a particular dataset or prevalence spectrum, facilitating reproducible evaluation across sites and time.
@@ -671,7 +701,7 @@ In extensive in silico experiments, performance differences across hyperparamete
 The simulator natively handles multi-label outputs, inter-category coupling via latent text factors, and both category-specific and global annotator drifts (linear trends and session-reset random walks). This combination is uncommon in existing annotation models and is crucial for tasks where categories co-activate and annotator behavior evolves within a shift.
 
 \paragraph{Ablation-ready and diagnosis-friendly.}
-Because the components of the linear predictor map to distinct real-world phenomena, the setup supports clean ablations (e.g., removing school effects, suppressing drift, or turning off text loadings) to isolate which sources of variability stress a method. This design shortens the path from “observed failure” to “actionable hypothesis” about its cause.
+Because the components of the linear predictor map to distinct real-world phenomena, the setup supports clean ablations (e.g., removing institutional-group effects, suppressing drift, or turning off text loadings) to isolate which sources of variability stress a method. This design shortens the path from ``observed failure'' to ``actionable hypothesis'' about its cause.
 
 \paragraph{Generalizable and site-portable.}
 Institution effects and annotator-specific terms make domain shift an explicit part of the data-generating process, rather than an afterthought. Methods that perform well here are more likely to maintain behavior under changes in staffing, local practice patterns, or documentation styles, supporting portability across hospital services.
@@ -679,8 +709,8 @@ Institution effects and annotator-specific terms make domain shift an explicit p
 \paragraph{Operational readiness and auditability.}
 The evaluation pipeline produces decisions that can be traced back to human disagreement envelopes and CI-based rules, simplifying communication with clinical partners and governance bodies. Decisions are reproducible, explainable, and auditable—practical prerequisites for adoption in safety-critical environments.
 
-\paragraph{Computational tractability at scale.}
-Despite modeling rich dynamics, the framework remains lightweight: binary outcomes, a logistic link, and additive components allow efficient simulation over large grids and rapid re-computation for sensitivity analyses. This tractability enables broad exploration of settings and supports routine regression testing as systems evolve.
+\paragraph{Easy computability at scale.}
+Despite accounting for a variety of concurrent processes, the framework remains lightweight: binary outcomes, a logistic link, and additive components allow efficient simulation over large grids and rapid recomputation for sensitivity analyses. This easy computability enables broad exploration of settings and supports routine regression testing as systems evolve.
 
 \paragraph{Method-agnostic benchmarking.}
 Finally, the benchmark decouples data generation (human-like variability) from acceptance logic (RFR vs.\ baselines), allowing fair, apples-to-apples comparisons among alternative evaluation strategies. By avoiding reliance on any single performance metric or threshold, the framework encourages more nuanced, safety-aware method development.
@@ -700,10 +730,10 @@ Annotator dynamics are captured via linear trends and session-reset random walks
 Categories are simulated as binary decisions. Although this mirrors the annotation interface, several clinical constructs are inherently graded or ordinal. The binary formulation may compress clinically meaningful severity distinctions and attenuate calibration challenges tied to borderline cases.
 
 \paragraph{Identifiability and parameter estimation.}
-Multiple variance components (text, school, annotator-by-category, global annotator) can trade off in finite samples, raising partial identifiability concerns. Hyperparameters are estimated empirically but, given the modest elicitation base, may absorb dataset-specific artifacts (e.g., documentation templates), limiting portability.
+Multiple variance components (text, institutional-group, annotator-by-category, global annotator) can trade off in finite samples, raising partial identifiability concerns. Hyperparameters are estimated empirically but, given the modest elicitation base, may absorb dataset-specific artifacts (e.g., documentation templates), limiting portability.
 
 \paragraph{Institution effect simplification.}
-The “school” effect is parameterized via a simple contrast per category. Real institutional differences can be multi-faceted (coding policy, staffing mix, supervision practices). A single-contrast summary may underfit such heterogeneity, potentially smoothing over site-specific quirks that matter in practice.
+The institutional-group effect is parameterized via a simple contrast per category. Real institutional differences can be multi-faceted (coding policy, staffing mix, supervision practices). A single-contrast summary may underfit such heterogeneity, potentially smoothing over site-specific quirks that matter in practice.
 
 \paragraph{Inter-category dependence.}
 Co-activation is induced through shared text factors, not an explicit category–category dependency structure. This may understate conditional dependencies that persist after text effects are accounted for (e.g., mutually exclusive labels or strict hierarchical relations).
@@ -712,7 +742,7 @@ Co-activation is induced through shared text factors, not an explicit category�
 While we report a broad set of metrics, the study emphasizes specificity-oriented acceptance (RFR) versus recall-oriented baselines. This lens matches safety-first goals but may understate scenarios where high sensitivity to rare but benign behaviors is preferred (e.g., exploratory triage tools). Moreover, clinically “non-relevant” effect sizes at the aggregate level could still matter in subpopulations or edge cases not fully explored.
 
 \paragraph{Dependence on reference panel quality.}
-RFR calibrates acceptance to the envelope of human–human disagreement. If the reference panel encodes systematic biases or inconsistent practices, the acceptance boundary may inherit these limitations—potentially rejecting models that challenge suboptimal norms or accepting models aligned with them.
+RFR calibrates acceptance to the envelope of human–human disagreement, which is the foundational premise of the framework. Operationally, if the reference panel encodes systematic biases or inconsistent practices, the acceptance boundary may inherit these features—potentially rejecting models that challenge suboptimal norms or accepting models aligned with them.
 
 \paragraph{Distance choice and label topology.}
 Our disagreement geometry relies on Hamming distances across categories. Alternative notions of proximity (e.g., cost-sensitive, hierarchy-aware, or clinically weighted distances) might better reflect the asymmetries among labels; using Hamming may misstate the severity of certain disagreements.
@@ -731,7 +761,7 @@ The qualitative foundation relies on clinician recall and behavior within a spec
 
 \subsection{Conclusion}
 
-Situated alongside latent-label aggregation and annotator modeling \cite{dawid1979maximum,hui1980study,chou2019,fornaciari2021}, robustness-to-noise training \cite{garg2021,han2022,han2023,frenay2014,cannings2018}, and representation-based comparators \cite{disalvo2024}, \textit{Rank from References} offers a deployment-oriented alternative: it asks whether a system’s disagreements remain \emph{within} empirically observed human variability, providing an auditable, parameter-light go/no-go rule rather than a single “gold” label score \cite{basile2021,shojania2020,conover1972,SLCA}. In our scope—multi-label, non-exclusive, document-level clinical text—this plurality-respecting criterion complements training-time robustness and yields decisions aligned with safety-first practice. Looking forward, the same acceptance logic extends naturally to richer text structurations (e.g., FHIR-like forms) by replacing Hamming with clinically informed, semantics-aware distances, thus crediting near misses and penalizing distant errors while preserving a clear acceptance boundary \cite{basile2021,disalvo2024}. Accordingly, we contend that evaluations based on such variability-aware acceptance metrics should be \emph{mandatory} prior to deploying any AI text classification system that can impact patient care \cite{shojania2020,SLCA}.
+Situated alongside latent-label aggregation and annotator modeling \cite{dawid1979maximum,hui1980study,chou2019,fornaciari2021}, robustness-to-noise training \cite{garg2021,han2022,han2023,frenay2014,cannings2018}, and representation-based comparators \cite{disalvo2024}, \textit{Rank from References} offers a deployment-oriented alternative: it asks whether a system’s disagreements remain \emph{within} empirically observed human variability, providing an auditable, parameter-light go/no-go rule rather than a single “gold” label score \cite{basile2021,shojania2020,conover1972,SLCA}. In our scope---multi-label, non-exclusive, document-level clinical text---this plurality-respecting criterion complements training-time robustness and yields decisions aligned with safety-first practice. Looking forward, the same acceptance logic extends naturally to richer text structuring targets (e.g., FHIR-like forms) by replacing Hamming with clinically informed, semantics-aware distances, thus crediting near misses and penalizing distant errors while preserving a clear acceptance boundary \cite{basile2021,disalvo2024}. Accordingly, we contend that evaluations based on such variability-aware acceptance metrics should be \emph{mandatory} before deploying any AI text-classification system that can impact patient care \cite{shojania2020,SLCA}.
 
 
 
@@ -751,31 +781,31 @@ Dawid, A. P., and Skene, A. M. (1979). Maximum likelihood estimation of observer
 Hui, S. L., and Walter, S. D. (1980). Estimating the error rates of diagnostic tests. \textit{Biometrics}, 167--171.
 
 \bibitem{chou2019}
-Chou, H., and Lee, M. (2019). Bayesian aggregation for imperfect annotations: Leveraging prior distributions of annotator reliability. 	\textit{International Journal of Approximate Reasoning}, 105, 25--37.
+Chou, H., and Lee, M. (2019). Bayesian aggregation for imperfect annotations: Leveraging prior distributions of annotator reliability. \textit{International Journal of Approximate Reasoning}, 105, 25--37.
 
 \bibitem{fornaciari2021}
-Fornaciari, T., Moschitti, A., and Jha, R. (2021). Expressing annotator disagreement with Bayesian label smoothing. 	extit{Transactions of the Association for Computational Linguistics}, 9, 1234--1250.
+Fornaciari, T., Moschitti, A., and Jha, R. (2021). Expressing annotator disagreement with Bayesian label smoothing. \textit{Transactions of the Association for Computational Linguistics}, 9, 1234--1250.
 
 \bibitem{garg2021}
-Garg, S., et al. (2021). 	extit{Robust learning from noisy labels with co-teaching and dynamic bootstrapping}. In IEEE Conference on Computer Vision.
+Garg, S., et al. (2021). \textit{Robust learning from noisy labels with co-teaching and dynamic bootstrapping}. In IEEE Conference on Computer Vision.
 
 \bibitem{disalvo2024}
-Di Salvo, V., et al. (2024). WANN: Weighted approximate nearest neighbors for classification in large-scale embeddings. 	extit{Journal of Machine Learning Research}, 25, 1--29.
+Di Salvo, V., et al. (2024). WANN: Weighted approximate nearest neighbors for classification in large-scale embeddings. \textit{Journal of Machine Learning Research}, 25, 1--29.
 
 \bibitem{basile2021}
-Basile, V., et al. (2021). Toward a perspectivist data manifesto. 	extit{Computational Linguistics}, 47(3), 649--674.
+Basile, V., et al. (2021). Toward a perspectivist data manifesto. \textit{Computational Linguistics}, 47(3), 649--674.
 
 \bibitem{han2022}
-Han, B., et al. (2022). Learning with imperfect data at scale: challenges and solutions. 	extit{IEEE Transactions on Pattern Analysis and Machine Intelligence}, 44(5), 2500--2513.
+Han, B., et al. (2022). Learning with imperfect data at scale: challenges and solutions. \textit{IEEE Transactions on Pattern Analysis and Machine Intelligence}, 44(5), 2500--2513.
 
 \bibitem{han2023}
-Han, B., et al. (2023). Imperfect data learning: a comprehensive overview. 	extit{arXiv preprint} arXiv:2302.12345.
+Han, B., et al. (2023). Imperfect data learning: a comprehensive overview. \textit{arXiv preprint} arXiv:2302.12345.
 
 \bibitem{frenay2014}
-Fr\'enay, B., and Verleysen, M. (2014). Classification in the presence of label noise: a survey. 	extit{IEEE Transactions on Neural Networks and Learning Systems}, 25(5), 845--869.
+Fr\'enay, B., and Verleysen, M. (2014). Classification in the presence of label noise: a survey. \textit{IEEE Transactions on Neural Networks and Learning Systems}, 25(5), 845--869.
 
 \bibitem{cannings2018}
-Cannings, T., Nath, A., and Sen, B. (2018). On the impact of label noise on the complexity and convergence rates of Empirical Risk Minimization. 	extit{NeurIPS}, 31.
+Cannings, T., Nath, A., and Sen, B. (2018). On the impact of label noise on the complexity and convergence rates of Empirical Risk Minimization. \textit{NeurIPS}, 31.
 
 \bibitem{shojania2020}
 Shojania, K., and Marang-van de Mheen, P. J. (2020). Challenges in making reliable conclusions in patient safety research. \textit{BMJ Quality \& Safety}, 29(4), 351--354.
@@ -784,7 +814,7 @@ Shojania, K., and Marang-van de Mheen, P. J. (2020). Challenges in making reliab
 Conover, W.\ J.\ (1972). A Kolmogorov Goodness-of-Fit Test for Discontinuous Distributions. \textit{Journal of the American Statistical Association}, 67(339), 591--596.
 
 \bibitem{SLCA}
-Loi et al (2025). Self-Logical Consistency Assessment of Large Language Models for Patient Feedback Classification : Algorithm Development and Validation Study \textit{medRxiv}
+Loi et al. (2025). Self-Logical Consistency Assessment of Large Language Models for Patient Feedback Classification: Algorithm Development and Validation Study. \textit{medRxiv}.
 
 \bibitem{who2025lmm}
 World Health Organization (2025). Ethics and governance of artificial intelligence for health: Guidance on large multi-modal models (LMMs). \textit{World Health Organization}, Geneva. 
@@ -816,9 +846,3 @@ Reddy, S., et al. (2024). Generative AI in healthcare: opportunities, risks and 
 
 
 \end{document}
-
-
-
-
-
-

@@ -29,3 +29,11 @@ data/*
 # Generated outputs
 results/
 
+# Manuscript artifacts
+*.pdf
+*.tex
+
+RFR.aux
+RFR.log
+RFR.out
+RFR.toc
