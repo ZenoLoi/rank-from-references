@@ -24,10 +24,8 @@ env/
 # Raw/private data dumps
 data/*
 !data/.gitkeep
+*.txt
 
 # Generated outputs
 results/
 
-# Explicitly excluded private review artifacts
-consignes.txt
-commentaires_Mircea.pdf
