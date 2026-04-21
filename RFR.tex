@@ -277,20 +277,18 @@ The proof follows by noting that $j\neq i$ is excluded from self-comparisons and
 We assume between-document variability dominates within-document category variability.
 Accordingly, for a summary metric $\theta\in\{\Delta_{\chi},\rho_{\chi}\}$, define the per-document values
 $\theta_d$ (i.e., $\theta_d\in\{\Delta_d,\rho_d\}$) and their mean $\bar{\theta}=\tfrac{1}{n_d}\sum_{d=1}^{n_d}\theta_d$.
-The empirical between-document variance is
+A nonparametric bootstrap over documents is then used to quantify uncertainty: we resample
+the $n_d$ documents with replacement, recompute $\bar{\theta}$ for each bootstrap replicate
+$b\in\{1,\dots,B\}$, and obtain $\bar{\theta}^{*(b)}$.
+Hence a $(1-\alpha)$ two-sided confidence interval is estimated with percentile bounds:
 \[
-s_a^{2}=\frac{1}{n_d-1}\sum_{d=1}^{n_d}\bigl(\theta_d-\bar{\theta}\bigr)^2,
+\boxed{\;\Bigl[q_{\alpha/2}\bigl(\{\bar{\theta}^{*(b)}\}_{b=1}^{B}\bigr),\ 
+q_{1-\alpha/2}\bigl(\{\bar{\theta}^{*(b)}\}_{b=1}^{B}\bigr)\Bigr]\;}\tag{CI}
 \]
-with standard error
-\[
-\mathrm{SE}(\bar{\theta})=\frac{s_a}{\sqrt{n_d}}.
-\]
-Hence a $(1-\alpha)$ two-sided confidence interval is
-\[
-\boxed{\;\bar{\theta}\ \pm\ z_{1-\alpha/2}\,\frac{s_a}{\sqrt{n_d}}\;}\tag{CI}
-\]
-where $z_{1-\alpha/2}=1.96$ for a $95\%$ interval.
-This closed-form expression is simple to audit and focuses uncertainty on case-to-case variability across documents.
+where, for a $95\%$ interval, the bounds are the $2.5^{\text{th}}$ and $97.5^{\text{th}}$
+percentiles of the bootstrap distribution.
+This bootstrap formulation is simple to audit and focuses uncertainty on case-to-case
+variability across documents without relying on normality assumptions.
 
 
 
@@ -818,7 +816,6 @@ Reddy, S., et al. (2024). Generative AI in healthcare: opportunities, risks and 
 
 
 \end{document}
-
 
 
 
