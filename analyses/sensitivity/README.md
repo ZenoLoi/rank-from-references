@@ -1,12 +1,15 @@
 # Sensitivity Analyses
 
-This folder documents sensitivity analyses aligned with the manuscript updates.
+This folder documents the lighter sensitivity workflow used to vary panel size `m` and non-inferiority quantile `q`.
 
-Current implementation script:
+Scripts:
+
+- `../../scripts/rfr_main_simulation.py`
 - `../../scripts/rfr_sensitivity_analysis.py`
 
-Main explored axes:
-- panel size `m`
-- non-inferiority quantile `q`
+Default outputs:
 
-Generated outputs are written under `results/sensitivity_rfr/`.
+- `results/main_simulation/`
+- `results/sensitivity_rfr/`
+
+The primary hyperparameter-grid benchmark is documented separately under `../main/README.md`.

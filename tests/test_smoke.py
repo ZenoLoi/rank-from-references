@@ -10,6 +10,8 @@ def test_smoke_evaluate_candidates(tmp_path):
         "h1,human,d1,c2,0\n"
         "h2,human,d1,c1,1\n"
         "h2,human,d1,c2,1\n"
+        "h3,human,d1,c1,0\n"
+        "h3,human,d1,c2,0\n"
         "ai1,ai,d1,c1,1\n"
         "ai1,ai,d1,c2,0\n"
     )

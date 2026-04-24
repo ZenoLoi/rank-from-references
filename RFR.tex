@@ -28,14 +28,12 @@
 
 \begin{document}
 
-\title{Rank from References: \\Operational Evaluation for Text AI Classification\\\large Research Report}
+\title{Rank from References: \\Operational Evaluation for Text AI Classification}
 \author{Zeno Loi, Mircea Sofonea, Grégoire Mercier, Kévin Yauy, David Morquin\\
 CHU Montpellier, Univ. Montpellier}
 \date{2026-04-21}
 
 \maketitle
-
-\newpage
 
 \begin{abstract}
 \textbf{Background:}\\
@@ -580,6 +578,13 @@ combinatorial set of parameter configurations, each producing a full corpus of
 human and AI annotations. The entire set of results was subsequently aggregated
 for performance evaluation of the discrimination algorithms (Section~\ref{sec:algorithms-eval}).
 
+\subsection{Code and Reproducibility}
+\label{sec:code-reproducibility}
+
+To support reproducibility, we organized the computational workflow as a version-controlled public repository containing: (i) the reusable Python implementation of \textit{Rank from References}, (ii) the scripts used to generate the evaluative simulation grid and benchmark RFR against the F1-based baselines, (iii) the sensitivity-analysis workflow for panel size and quantile threshold, and (iv) the \LaTeX{} manuscript source itself \cite{rfrgithub}. In practical terms, reproducibility is structured in three layers: a package layer for the core scoring functions, a script layer for end-to-end simulation and benchmarking, and a manuscript layer for the text and figures reported in the preprint.
+
+The repository was designed so that analyses can be rerun from the project root with explicit commands, fixed default seeds, and generated outputs written to dedicated non-versioned result directories. This separation between source code, manuscript source, and derived artifacts provides an auditable framework for reproducing the main in silico benchmark as well as the supplementary sensitivity experiments.
+
 \subsection{Algorithm Performance Evaluation Methodology}
 \label{sec:algorithms-eval}
 
@@ -761,7 +766,7 @@ The qualitative foundation relies on clinician recall and behavior within a spec
 
 \subsection{Conclusion}
 
-Situated alongside latent-label aggregation and annotator modeling \cite{dawid1979maximum,hui1980study,chou2019,fornaciari2021}, robustness-to-noise training \cite{garg2021,han2022,han2023,frenay2014,cannings2018}, and representation-based comparators \cite{disalvo2024}, \textit{Rank from References} offers a deployment-oriented alternative: it asks whether a system’s disagreements remain \emph{within} empirically observed human variability, providing an auditable, parameter-light go/no-go rule rather than a single “gold” label score \cite{basile2021,shojania2020,conover1972,SLCA}. In our scope---multi-label, non-exclusive, document-level clinical text---this plurality-respecting criterion complements training-time robustness and yields decisions aligned with safety-first practice. Looking forward, the same acceptance logic extends naturally to richer text structuring targets (e.g., FHIR-like forms) by replacing Hamming with clinically informed, semantics-aware distances, thus crediting near misses and penalizing distant errors while preserving a clear acceptance boundary \cite{basile2021,disalvo2024}. Accordingly, we contend that evaluations based on such variability-aware acceptance metrics should be \emph{mandatory} before deploying any AI text-classification system that can impact patient care \cite{shojania2020,SLCA}.
+Situated alongside latent-label aggregation and annotator modeling \cite{dawid1979maximum,hui1980study,chou2019,fornaciari2021}, robustness-to-noise training \cite{garg2021,han2022,han2023,frenay2014,cannings2018}, and representation-based comparators \cite{disalvo2024}, \textit{Rank from References} offers a deployment-oriented alternative: it asks whether a system’s disagreements remain \emph{within} empirically observed human variability, providing an auditable, parameter-light go/no-go rule rather than a single “gold” label score \cite{basile2021,shojania2020,conover1972,SLCA}. In our scope---multi-label, non-exclusive, document-level clinical text---this plurality-respecting criterion complements training-time robustness and yields decisions aligned with safety-first practice. Looking forward, the same acceptance logic extends naturally to richer text structuring targets (e.g., FHIR-like forms) by replacing Hamming with clinically informed, semantics-aware distances, thus crediting near misses and penalizing distant errors while preserving a clear acceptance boundary \cite{basile2021,disalvo2024}. Accordingly, we contend that variability-aware acceptance metrics of this kind should be integrated into pre-deployment evaluation of AI text-classification systems that can impact patient care \cite{shojania2020,SLCA}.
 
 
 
@@ -771,6 +776,20 @@ Situated alongside latent-label aggregation and annotator modeling \cite{dawid19
 
 
 
+
+\section{Declarations}
+
+\subsection{Ethics Statement}
+This manuscript reports a methodological study whose benchmark results and sensitivity analyses are generated from simulated data. The empirical calibration step relied on secondary use of anonymized source documents, expert annotations, and high-level qualitative themes derived from a prior study evaluating AI engines for the classification of intensive care reports against inclusion criteria. That primary study was approved by the Institutional Review Board (IRB) and the Scientific and Ethical Committee (CSE) of the Montpellier University Hospital Health Data Warehouse (eDOL) (IRB No.\ A034/2024-10-152/001, approved on 28 November 2024), and the secondary use reported here was covered by that protocol. No patient-identifying information is reported in the manuscript or distributed in the accompanying repository. No prospective enrollment, intervention, or clinical trial was performed for the present methodological study, and clinical trial registration was therefore not applicable. All source material was handled under applicable institutional confidentiality and data-protection requirements.
+
+\subsection{Funding Statement}
+This work received no external project-specific funding. It was conducted within the routine salaried institutional activities of the authors at CHU Montpellier and Univ. Montpellier.
+
+\subsection{Competing Interest Statement}
+The authors declare that they have no competing interests.
+
+\subsection{Data Availability Statement}
+The study is reproducible from the public code repository \cite{rfrgithub}. The results reported in the manuscript arise from a generative simulation framework and can be regenerated by rerunning the documented workflows in the repository. No patient-level source documents are redistributed. The manuscript reports only simulated outputs and aggregate calibration summaries derived from approved secondary use of anonymized source material.
 
 \bibliographystyle{plain}
 \begin{thebibliography}{9}
@@ -836,6 +855,9 @@ Singhal, K., et al. (2023). Large language models encode clinical knowledge. \te
 
 \bibitem{reddy2024genAI}
 Reddy, S., et al. (2024). Generative AI in healthcare: opportunities, risks and implementation considerations. \textit{Implementation Science}, 19, 62.
+
+\bibitem{rfrgithub}
+Loi, Z. (2026). \textit{rank-from-references}. GitHub repository. \url{https://github.com/ZenoLoi/rank-from-references}
 
 
 

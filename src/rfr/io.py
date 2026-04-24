@@ -65,8 +65,8 @@ def load_long_table(
     human_ids = [a for a in actor_ids if actor_type.get(a) == human_type]
     candidate_ids = [a for a in actor_ids if actor_type.get(a) == candidate_type]
 
-    if len(human_ids) < 2:
-        raise ValueError("Need at least 2 humans")
+    if len(human_ids) < 3:
+        raise ValueError("Need at least 3 humans")
     if not candidate_ids:
         raise ValueError("No candidate actors found")
 

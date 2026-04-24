@@ -1,15 +1,60 @@
 # Scripts
 
-This folder contains executable scripts for manuscript-aligned analyses and reusable RFR computation.
+This folder contains executable workflows for the manuscript and for local RFR usage.
 
-## `rfr_main_simulation.py`
+## Core Usage
 
-Baseline manuscript simulation (single `m`, single `q`) with replicate aggregation.
+- `run_rfr.py`: thin launcher around the package CLI.
+
+## Main Benchmark Workflow
+
+### `rfr_generate_primary_grid.py`
+
+Generates the full manuscript hyperparameter grid as one compressed NPZ archive per configuration.
+
+Default outputs:
+
+- `results/main_analysis/classifications_high_bias_npz/<config>/results.npz`
+- `results/main_analysis/classifications_high_bias_npz/<config>/meta.json`
+- `results/main_analysis/classifications_high_bias_npz/manifest.json`
+
+### `rfr_build_memmap.py`
+
+Consolidates the primary-grid archives into a single memory-mapped NumPy array plus metadata.
+
+Default outputs:
+
+- `results/main_analysis/main_grid_uint8.npy`
+- `results/main_analysis/main_grid_meta.json`
+
+### `rfr_compare_benchmarks.py`
+
+Runs the manuscript benchmark on the consolidated array:
+
+- RFR (quantile-based non-inferiority),
+- Majority-F1,
+- Average pairwise F1.
+
+Default outputs:
+
+- `results/main_analysis/benchmark/benchmark_summary.csv`
+- `results/main_analysis/benchmark/benchmark_by_config.csv`
+- `results/main_analysis/benchmark/correct_*.csv`
+
+Optional:
+
+- `--plot-heatmaps` to generate `byparam_heatmaps/` when `matplotlib` is installed.
+
+## Sensitivity Workflow
+
+### `rfr_main_simulation.py`
+
+Baseline manuscript-style simulation for a single `(m, q)` setting with replicate aggregation.
 
 ### Usage
 
 ```bash
-python3 scripts/rfr_main_simulation.py \
+python scripts/rfr_main_simulation.py \
   --outdir results/main_simulation \
   --n-replicates 120 \
   --m 8 \
@@ -27,12 +72,12 @@ python3 scripts/rfr_main_simulation.py \
 
 ## `run_rfr.py`
 
-Thin wrapper around the `rfr` CLI (module entrypoint), useful when running directly from the repository.
+Thin wrapper around the package CLI entrypoint.
 
 ### Usage
 
 ```bash
-python3 scripts/run_rfr.py \
+python scripts/run_rfr.py \
   --input examples/toy_annotations.csv \
   --output results/toy_rfr_scores.csv \
   --q 0.9 \
@@ -41,7 +86,7 @@ python3 scripts/run_rfr.py \
 
 ## `rfr_sensitivity_analysis.py`
 
-Generic sensitivity analysis script for:
+Sensitivity analysis script for:
 - panel size `m`
 - non-inferiority quantile `q`
 
@@ -52,7 +97,7 @@ It is simulation-agnostic via a pluggable provider interface:
 ### Usage
 
 ```bash
-python3 scripts/rfr_sensitivity_analysis.py \
+python scripts/rfr_sensitivity_analysis.py \
   --outdir results/sensitivity_rfr \
   --n-replicates 60 \
   --n-boot 200 \

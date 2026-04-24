@@ -25,13 +25,13 @@ env/
 data/*
 !data/.gitkeep
 *.txt
+RFR_legacy/
 
 # Generated outputs
 results/
 
 # Manuscript artifacts
 *.pdf
-*.tex
 
 RFR.aux
 RFR.log
